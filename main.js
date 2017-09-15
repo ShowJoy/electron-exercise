@@ -1,10 +1,8 @@
 'use strict';
 
-var app = require('app');
-var BrowserWindow = require('browser-window');
-var globalShortcut = require('global-shortcut');
+let { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, ipcRenderer } = require('electron');
 var configuration = require('./configuration');
-var ipc = require('ipc');
+var path = require('path');
 
 var mainWindow = null;
 var settingsWindow = null;
@@ -21,13 +19,43 @@ app.on('ready', function() {
         width: 368
     });
 
-    mainWindow.loadUrl('file://' + __dirname + '/app/index.html');
+    mainWindow.loadURL('file://' + __dirname + '/app/index.html');
 
     setGlobalShortcuts();
+
+    let tray = null;
+    if (process.platform === 'darwin') {
+        tray = new Tray(path.join(__dirname, 'app/img/tray-iconTemplate.png'));
+    }
+    else {
+        tray = new Tray(path.join(__dirname, 'app/img/tray-icon-alt.png'));
+    }
+
+    const contextMenu = Menu.buildFromTemplate([
+        {
+            label: 'Sound machine',
+            enabled: false
+        },
+        {
+            label: 'Settings',
+            accelerator: 'Ctrl+Shift+s',
+            click: function (item, win, evt) {
+                ipcMain.emit('open-settings-window');
+            }
+        },
+        {
+            label: 'Quit',
+            click: function () {
+                ipcMain.emit('close-main-window');
+            }
+        }
+    ]);
+    tray.setToolTip('This is my application.')
+    tray.setContextMenu(contextMenu)
 });
 
 function setGlobalShortcuts() {
-    globalShortcut.unregisterAll();
+    globalShortcut.unregisterAll(); // 注销
 
     var shortcutKeysSetting = configuration.readSettings('shortcutKeys');
     var shortcutPrefix = shortcutKeysSetting.length === 0 ? '' : shortcutKeysSetting.join('+') + '+';
@@ -40,11 +68,11 @@ function setGlobalShortcuts() {
     });
 }
 
-ipc.on('close-main-window', function () {
+ipcMain.on('close-main-window', function () {
     app.quit();
 });
 
-ipc.on('open-settings-window', function () {
+ipcMain.on('open-settings-window', function () {
     if (settingsWindow) {
         return;
     }
@@ -56,19 +84,19 @@ ipc.on('open-settings-window', function () {
         width: 200
     });
 
-    settingsWindow.loadUrl('file://' + __dirname + '/app/settings.html');
+    settingsWindow.loadURL('file://' + __dirname + '/app/settings.html');
 
     settingsWindow.on('closed', function () {
         settingsWindow = null;
     });
 });
 
-ipc.on('close-settings-window', function () {
+ipcMain.on('close-settings-window', function () {
     if (settingsWindow) {
         settingsWindow.close();
     }
 });
 
-ipc.on('set-global-shortcuts', function () {
+ipcMain.on('set-global-shortcuts', function () {
     setGlobalShortcuts();
 });
