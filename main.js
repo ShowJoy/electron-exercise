@@ -1,6 +1,6 @@
 'use strict';
 
-let { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, ipcRenderer } = require('electron');
+let { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, MenuItem, ipcRenderer } = require('electron');
 var configuration = require('./configuration');
 var path = require('path');
 
@@ -13,14 +13,37 @@ app.on('ready', function() {
     }
 
     mainWindow = new BrowserWindow({
-        frame: false,
+        // frame: false,
+        // titleBarStyle: 'hiddenInset',
+        // webPreferences: {enableBlinkFeatures: ''},
         height: 700,
         resizable: false,
         width: 368
     });
 
     mainWindow.loadURL('file://' + __dirname + '/app/index.html');
+    // windows
+    // mainWindow.setThumbarButtons([
+    //     {
+    //         tooltip: 'button1',
+    //         icon: path.join(__dirname, 'app/img/tray-iconTemplate.png'),
+    //         click() { console.log('hi'); }
+    //     }
+    // ]);
 
+    // 进度条
+    // mainWindow.setProgressBar(0.5);
+
+    // windows
+    // mainWindow.once('focus', () => mainWindow.flashFrame(false));
+    // mainWindow.flashFrame(true);
+
+    mainWindow.setRepresentedFilename(`${__dirname}/main.js`);
+    mainWindow.setDocumentEdited(true);
+
+    // mainWindow.webContents.openDevTools();
+
+    // 键盘快捷键
     setGlobalShortcuts();
 
     let tray = null;
@@ -50,8 +73,16 @@ app.on('ready', function() {
             }
         }
     ]);
-    tray.setToolTip('This is my application.')
-    tray.setContextMenu(contextMenu)
+    tray.setToolTip('This is my application.');
+    tray.setContextMenu(contextMenu);
+    app.dock.setMenu(contextMenu);
+
+    const menu = new Menu();
+    menu.append(new MenuItem({
+        label: 'print',
+        accelerator: 'Ctrl+p',
+        click: () => console.log('clicked')
+    }));
 });
 
 function setGlobalShortcuts() {
@@ -78,11 +109,14 @@ ipcMain.on('open-settings-window', function () {
     }
 
     settingsWindow = new BrowserWindow({
-        frame: false,
+        // frame: false,
         height: 200,
         resizable: false,
         width: 200
     });
+
+    settingsWindow.setRepresentedFilename(`${__dirname}/main1.js`);
+    settingsWindow.setDocumentEdited(true);
 
     settingsWindow.loadURL('file://' + __dirname + '/app/settings.html');
 
@@ -99,4 +133,11 @@ ipcMain.on('close-settings-window', function () {
 
 ipcMain.on('set-global-shortcuts', function () {
     setGlobalShortcuts();
+});
+
+ipcMain.on('ondragstart', (evt, filepath) => {
+    evt.sender.startDrag({
+        file: filepath,
+        icon: path.join(__dirname, 'app/img/close.png')
+    });
 });
